@@ -5,6 +5,7 @@ import java.io.PrintWriter;
 import java.util.Scanner;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.lang.StringBuilder;
 
 public class TuringMachineInterpreter {
 	
@@ -12,11 +13,12 @@ public class TuringMachineInterpreter {
 	ArrayList<String> inputTapes = new ArrayList<String>();
 	ArrayList<String> outputTapes = new ArrayList<String>();
 	
-	static String inputPath = "";
-	static String outputPath = "";
+	static String inputPath = ""; // the path to the file where data is read from
+	static String outputPath = ""; // the path to the file where data is written to
 	
 	public static void main(String[] args) {
 		System.out.println("Welcome to my Turing Machine Interpreter");
+		System.out.println("Computing...");
 		
 		// validate bash arguments
 //		if (args.length == 2) {
@@ -28,26 +30,60 @@ public class TuringMachineInterpreter {
 		
 		TuringMachineInterpreter interpreter = new TuringMachineInterpreter();
 		
-		interpreter.input("input.txt"); 
+		interpreter.input("input.txt"); // builds a turning machine in accords to the input file
 		
-		for(String tape: interpreter.inputTapes) {
-			for (int i = 0; i<tape.length(); i++) {
-				System.out.println(tape.charAt(i));
+		System.out.println("Turning machine created. Being to execute input tapes...");
+		
+		for (String tape: interpreter.inputTapes) { // execute all input tapes
+			StringBuilder output = new StringBuilder(tape);
+			State currentState = interpreter.states.get(0);
+			int headPosition = 0;
+			
+			while (true) {				
+				Transition transition = currentState.transition(output.charAt(headPosition)); // read the tape and get the appropriate transition
 				
+				if (transition == null) { // no valid transition exists
+					// reject and halt
+					interpreter.outputTapes.add(output.substring(0, output.length()-1));
+					interpreter.outputTapes.add("REJECT");
+					break;
+				} else {
+					// write to output tape
+					output.replace(headPosition, headPosition+1, Character.toString(transition.outputSymbol));
+				}
 				
-			}
+				currentState = interpreter.states.get(transition.nextStateNumber); // transition to new state
+				
+				// execute head instructions
+				if (transition.headInstruction == 'R') { // move right
+					headPosition++;
+				} else if (transition.headInstruction == 'L') { // move left
+					headPosition--;
+				} else if (transition.headInstruction == 'H') { // halt
+					interpreter.outputTapes.add(output.substring(0, output.length()-1));
+					if (currentState.isFinalState) {
+						interpreter.outputTapes.add("ACCEPT");
+					} else {
+						interpreter.outputTapes.add("REJECT");
+					}					
+					break;
+				}
+				
+			} 
 		}
 		
-//		interpreter.output("output.txt");		
+		interpreter.output("output.txt");
 		
+		System.out.println("Done executing input strings. See output file for results. ");	
 	}
 	
+	// this function opens the input file and constructs a turning machine accordingly
 	void input(String path) {
 		try {
 			Scanner scanner = new Scanner(new File(path));
 			
 			while (scanner.hasNext()) {
-				String[] tuple = scanner.nextLine().split(" ");
+				String[] tuple = scanner.nextLine().split(" "); // parse line by removing all white space
 				
 				switch(tuple[0].charAt(0)) {
 				case 't': // transition
@@ -62,7 +98,7 @@ public class TuringMachineInterpreter {
 					newInputTape(tuple);
 					break;
 					
-				default:
+				default: // something went wrong
 					System.out.println("Unrecognized line in input file.");
 					break;
 				}
@@ -74,6 +110,7 @@ public class TuringMachineInterpreter {
 		}
 	}
 	
+	// this function opens the output file and writes all output tapes to it
 	void output(String path) {
 		try {
 			PrintWriter writer = new PrintWriter(new File(path));	
@@ -86,6 +123,7 @@ public class TuringMachineInterpreter {
 		}
 	}
 	
+	// create a new transition object with a state object
 	void newTransition(String[] tuple) {
 		// tuple[1] is the state number
 		// tuple[2] is the input symbol
@@ -104,6 +142,7 @@ public class TuringMachineInterpreter {
 				tuple[5].charAt(0));
 	}
 	
+	// mark the appropriate states to be accept states
 	void setFinalStates(String[] tuple) {
 		// tuple[i] is the state number of a final state
 		for (int i = 1; i<tuple.length; i++) {
@@ -116,8 +155,9 @@ public class TuringMachineInterpreter {
 		}			
 	}
 	
+	// parse a new input tape
 	void newInputTape(String[] tuple) {	
 		// tuple[1] is the input tape
-		inputTapes.add(tuple[1]);
+		inputTapes.add(tuple[1] + "Z"); // *** IMPORTATNT *** Note the addition of the "Z" to indicate that the input is complete
 	}
 }
