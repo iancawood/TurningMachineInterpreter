@@ -18,63 +18,72 @@ public class TuringMachineInterpreter {
 	
 	public static void main(String[] args) {
 		System.out.println("Welcome to my Turing Machine Interpreter");
-		System.out.println("Computing...");
 		
 		// validate bash arguments
-//		if (args.length == 2) {
-//			inputPath = args[0];
-//			outputPath = args[1];
-//		} else {
-//			System.out.println("Invalid number of arguments.");
-//		}
-		
-		TuringMachineInterpreter interpreter = new TuringMachineInterpreter();
-		
-		interpreter.input("input.txt"); // builds a turning machine in accords to the input file
-		
-		System.out.println("Turning machine created. Being to execute input tapes...");
-		
-		for (String tape: interpreter.inputTapes) { // execute all input tapes
-			StringBuilder output = new StringBuilder(tape);
-			State currentState = interpreter.states.get(0);
-			int headPosition = 0;
+		if (args.length != 2) {
+			System.out.println("Invalid number of arguments.");
+
+		} else {
+			System.out.println("Computing...");
 			
-			while (true) {				
-				Transition transition = currentState.transition(output.charAt(headPosition)); // read the tape and get the appropriate transition
+			inputPath = args[0];
+			outputPath = args[1];
+			
+			TuringMachineInterpreter interpreter = new TuringMachineInterpreter();
+			
+			interpreter.input(inputPath); // builds a turning machine in accords to the input file
+			
+			System.out.println("Turning machine created. Beginning to execute input tapes...");
+			
+			for (String tape: interpreter.inputTapes) { // execute all input tapes
+				if (tape.equals("Z#Z")) {
+					System.out.println("here");
+				}				
 				
-				if (transition == null) { // no valid transition exists
-					// reject and halt
-					interpreter.outputTapes.add(output.substring(0, output.length()-1));
-					interpreter.outputTapes.add("REJECT");
-					break;
-				} else {
-					// write to output tape
-					output.replace(headPosition, headPosition+1, Character.toString(transition.outputSymbol));
-				}
+				StringBuilder output = new StringBuilder(tape);
+				State currentState = interpreter.states.get(0);
+				int headPosition = 1; // this is 1, not 0 because I added "Z" to the front of the tape
 				
-				currentState = interpreter.states.get(transition.nextStateNumber); // transition to new state
-				
-				// execute head instructions
-				if (transition.headInstruction == 'R') { // move right
-					headPosition++;
-				} else if (transition.headInstruction == 'L') { // move left
-					headPosition--;
-				} else if (transition.headInstruction == 'H') { // halt
-					interpreter.outputTapes.add(output.substring(0, output.length()-1));
-					if (currentState.isFinalState) {
-						interpreter.outputTapes.add("ACCEPT");
-					} else {
+				while (true) {				
+					Transition transition = currentState.transition(output.charAt(headPosition)); // read the tape and get the appropriate transition
+					
+					if (transition == null) { // no valid transition exists
+						// reject and halt
+						interpreter.outputTapes.add(output.substring(1, output.length()-1));
 						interpreter.outputTapes.add("REJECT");
-					}					
-					break;
-				}
-				
-			} 
+						System.out.println("REJECT: " + tape);
+						break;
+					} else {
+						// write to output tape
+						output.replace(headPosition, headPosition+1, Character.toString(transition.outputSymbol));
+					}
+					
+					currentState = interpreter.states.get(transition.nextStateNumber); // transition to new state
+					
+					// execute head instructions
+					if (transition.headInstruction == 'R') { // move right
+						headPosition++;
+					} else if (transition.headInstruction == 'L') { // move left
+						headPosition--;
+					} else if (transition.headInstruction == 'H') { // halt
+						interpreter.outputTapes.add(output.substring(1, output.length()-1));
+						if (currentState.isFinalState) {
+							interpreter.outputTapes.add("ACCEPT");
+							System.out.println("ACCEPT: " + tape);
+						} else {
+							interpreter.outputTapes.add("REJECT");
+							System.out.println("REJECT: " + tape);
+						}					
+						break;
+					}
+					
+				} 
+			}
+			
+			interpreter.output(outputPath);
+			
+			System.out.println("Done.");
 		}
-		
-		interpreter.output("output.txt");
-		
-		System.out.println("Done executing input strings. See output file for results. ");	
 	}
 	
 	// this function opens the input file and constructs a turning machine accordingly
@@ -146,7 +155,7 @@ public class TuringMachineInterpreter {
 	void setFinalStates(String[] tuple) {
 		// tuple[i] is the state number of a final state
 		for (int i = 1; i<tuple.length; i++) {
-			int stateNumber = Integer.parseInt(tuple[1]);
+			int stateNumber = Integer.parseInt(tuple[i]);
 			if (states.get(stateNumber) != null) { // check if state exists
 				states.get(stateNumber).isFinalState = true;
 			} else {
@@ -158,6 +167,6 @@ public class TuringMachineInterpreter {
 	// parse a new input tape
 	void newInputTape(String[] tuple) {	
 		// tuple[1] is the input tape
-		inputTapes.add(tuple[1] + "Z"); // *** IMPORTATNT *** Note the addition of the "Z" to indicate that the input is complete
+		inputTapes.add("Z" + tuple[1] + "Z"); // *** IMPORTATNT *** Note the addition of the Z's to indicate the ends of the tape
 	}
 }
